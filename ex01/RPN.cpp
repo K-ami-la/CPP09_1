@@ -25,11 +25,20 @@ int RPN::evaluate(const std::string& expr)
         _stack.pop(); //pop on enlève
 
     //Cette ligne transforme une string (expr) en flux de lecture et permet de lire la string mot par mot
+    //flux de lecture : tuyau dans lequel les données passent petit à petit
+    //au lieu de lire toute la string d'un coup, on liit morceau par morceau
+    //en C strtok >>> 
+    //
     std::istringstream iss(expr);
     std::string token;
 
     //lit un élément un par un
     // >> lit jusqu a un espace
+    // >> opérateur d'extraction (lis quelque chose de iss et mets le dans token)
+    // iss >> token; // token = "3";
+    // iss >> token; // token = "4";
+    // iss >> token; // token = "+";
+
     while (iss >> token) 
     {
         //si le token est un opérateur
@@ -37,7 +46,7 @@ int RPN::evaluate(const std::string& expr)
             (token[0] == '+' || token[0] == '-' ||
              token[0] == '*' || token[0] == '/')) 
              
-             {
+            {
 
             //on doit avoir 2 nombres minimum
             if (_stack.size() < 2)
@@ -52,7 +61,8 @@ int RPN::evaluate(const std::string& expr)
 //             if (op == '+') ...
 //             else if (op == '-') ...
 //             else if (op == '*') ...
-            switch (token[0]) {
+            switch (token[0]) 
+            {
                 case '+': _stack.push(a + b); break;
                 case '-': _stack.push(a - b); break;
                 case '*': _stack.push(a * b); break;

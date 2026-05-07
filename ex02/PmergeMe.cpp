@@ -1,28 +1,27 @@
 #include "PmergeMe.hpp"
-#include <iostream>
-#include <sstream>
-#include <stdexcept>
-#include <algorithm>
-#include <climits>
-#include <ctime>
-#include <iomanip>
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Orthodox Canonical Form
-// ─────────────────────────────────────────────────────────────────────────────
+#include <iostream> //<<
+#include <sstream> //std::istringstream iss
+#include <stdexcept> //reuntime_error
+#include <algorithm> //std:swap ; std::lower_bound
+#include <climits> // INT_MAX
+#include <ctime> //std::clock()
+#include <iomanip> //format/affichage : std::fixed ; std::precision()
+
+
+//Canonical form
 
 PmergeMe::PmergeMe() {}
 
-PmergeMe::PmergeMe(const PmergeMe& other)
-    : _vec(other._vec), _deq(other._deq) {}
+PmergeMe::PmergeMe(const PmergeMe& other) : _vec(other._vec), _deq(other._deq) {}
 
-PmergeMe& PmergeMe::operator=(const PmergeMe& other) {
+PmergeMe& PmergeMe::operator=(const PmergeMe& other)
+{
     if (this != &other) 
     {
         _vec = other._vec;
         _deq = other._deq;
-    }
-    return *this;
+    }    return *this;
 }
 
 PmergeMe::~PmergeMe() {}
@@ -30,54 +29,77 @@ PmergeMe::~PmergeMe() {}
 
 
 
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Input parsing
-// ─────────────────────────────────────────────────────────────────────────────
+//parse
+// on parse les chiffres à l'entrée (input)
 
 //on commence à 1 (les nombres)
 //istringstream > on transforme la string en flux. ex "42" devient 42
-//long n : variable pour stocker le nombre
+//istringstream est objet de la bibliothéue c++ qui transforme une string en flux (stream). on a : "42 17 8" et puis on peut lire un par un : 42 → 17 → 8
+//iss : input string stream
+
+
+//long n : variable pour stocker le nombre. éviter le dépassement d'un int.
 //if (!(iss >> n) || n < 0 || n > static_cast<long>(INT_MAX) >>> vérifie 3 choses : - - nombre positif - pas trop grand  > évite les dépassements de int.
 //--si erreur lance une erreur
-//leftover >>> vérifié qu'il n'y a rien en trop (ex. "42abb")
+//iss >> n : je lis un nombre depuis la string. échoue si pas slmt chiffres
+//n > static_cast<long>(INT_MAX) : on convertit le INT_MAX en long et on compare.
+
+
+//leftover >>> vérifie qu'il n'y a rien en trop (ex. "42abb")
 //--si le texte reste on throw une erreur
 //on ajoute des conteneurs
 //static_cast >>> converit long en int
-//_vec.empty() >>> si aucun nombre n'a été donné throw erreur
-void PmergeMe::parse(int argc, char** argv) 
+//_vec.empty() >>> si aucun nombre n'a été donné throw erreur identique à_deque.empty ...
+
+void      PmergeMe::parse(int argc, char** argv) 
 {
-    for (int i = 1; i < argc; i++) 
+    for(int i = 1; i < argc; i++) 
     {
         std::istringstream iss(argv[i]);
-        long n;
-        if (!(iss >> n) || n < 0 || n > static_cast<long>(INT_MAX))
+        
+        long  n;
+        if(!(iss >> n) || n < 0 || n > static_cast<long>(INT_MAX) )
             throw std::runtime_error("Error: invalid argument.");
+
         std::string leftover;
         if (iss >> leftover)
             throw std::runtime_error("Error: invalid argument.");
+
         _vec.push_back(static_cast<int>(n));
         _deq.push_back(static_cast<int>(n));
     }
+
     if (_vec.empty())
         throw std::runtime_error("Error: no input.");
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Helper: Jacobsthal sequence ≥ n
-//   Sequence: 1, 3, 5, 11, 21, 43, 85, ...   (t_{k} = t_{k-1} + 2*t_{k-2})
-// ─────────────────────────────────────────────────────────────────────────────
+//math + algo pur
+//suite de Jacobsthal : chaque nombre = le précédent + 2 × l’avant-précédent
+// 1, 3, 5, 11, 21, 43, 85, ...   (t_{k} = t_{k-1} + 2*t_{k-2})
+//jac.back : dernier élément du tableau. si 1, 3, 5 ca sera le 5
+//!!!! c est le nombre d'éléments dans pend et non les valeures
+
+
+//la fonction va générer une liste de Jacobstahla >= n 
+//std::size_t n : le nombre de nombres dans pend
 static std::vector<std::size_t> buildJacobsthal(std::size_t n) 
 {
-    std::vector<std::size_t> jac;
-    jac.push_back(1);
-    jac.push_back(3);
-    while (jac.back() < n + 2) {
+        std::vector<std::size_t> jac;
+        jac.push_back(1);
+        jac.push_back(3);
+
+
+    while (jac.back() < n + 2 ) //ex n = 10. jac.back = 3; 10 + 2 = 12. 3 < 12.
+    {
+        //number of elements; ex jac = [1,3,5]; sz = 3
         std::size_t sz = jac.size();
+
         jac.push_back(jac[sz - 1] + 2 * jac[sz - 2]);
     }
+
     return jac;
 }
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Ford-Johnson for std::vector<int>
@@ -223,6 +245,7 @@ void PmergeMe::fjVec(std::vector<int> & arr)
 // Ford-Johnson for std::deque<int>
 // (Same algorithm — intentionally written separately per subject requirements)
 // ─────────────────────────────────────────────────────────────────────────────
+
 void PmergeMe::fjDeq(std::deque<int>& arr) {
     if (arr.size() <= 1)
         return;
@@ -268,7 +291,9 @@ void PmergeMe::fjDeq(std::deque<int>& arr) {
     for (std::size_t i = 1; i < m; i++)
         pend.push_back(sortedPairs[i].second);
 
-    if (!pend.empty()) {
+
+
+    if(!pend.empty()) {
         std::vector<std::size_t> jac      = buildJacobsthal(pend.size());
         std::vector<bool>        inserted(pend.size(), false);
 
@@ -276,14 +301,14 @@ void PmergeMe::fjDeq(std::deque<int>& arr) {
             std::size_t hi = std::min(jac[k] - 2, pend.size() - 1);
             std::size_t lo = jac[k - 1] - 1;
 
-            for (int i = static_cast<int>(hi); i >= static_cast<int>(lo); i--) {
+              for (int i = static_cast<int>(hi); i >= static_cast<int>(lo); i--) {
                 if (i < 0 || static_cast<std::size_t>(i) >= pend.size())
                     continue;
                 if (inserted[i])
                     continue;
 
-                int val     = pend[i];
-                int aPaired = sortedPairs[i + 1].first;
+                 int val     = pend[i];
+                 int aPaired = sortedPairs[i + 1].first;
 
                 std::deque<int>::iterator bound = mainChain.end();
                 for (std::deque<int>::iterator it = mainChain.begin();
@@ -302,13 +327,14 @@ void PmergeMe::fjDeq(std::deque<int>& arr) {
         }
     }
 
-    if (hasStraggler) {
+      if (hasStraggler) 
+    {
         std::deque<int>::iterator pos =
             std::lower_bound(mainChain.begin(), mainChain.end(), straggler);
         mainChain.insert(pos, straggler);
     }
 
-    arr = mainChain;
+        arr = mainChain;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

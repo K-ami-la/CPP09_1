@@ -36,3 +36,4 @@ private:
 
 //Jan Łukasiewicz logicien et mathématicien polonais
 
+//erreur à gérer : Erreurs à gérer : division par zéro, token invalide, stack vide lors d'un pop, plus d'un élément restant à la fin.
