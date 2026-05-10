@@ -82,39 +82,70 @@ void      PmergeMe::parse(int argc, char** argv)
 
 //la fonction va générer une liste de Jacobstahla >= n 
 //std::size_t n : le nombre de nombres dans pend
-static std::vector<std::size_t> buildJacobsthal(std::size_t n) 
+//ici on aurait pu utiliser le deque au lieu de vec
+//pourquoi ici one n + 2 d ou vient cette expression ?
+//donne un exemple de cette partie : jac.push_back(jac[sz - 1] + 2 * jac[sz - 2]);
+
+
+static std::vector<std::size_t> buildJacobsthal(std::size_t  n) 
 {
         std::vector<std::size_t> jac;
         jac.push_back(1);
         jac.push_back(3);
 
-
-    while (jac.back() < n + 2 ) //ex n = 10. jac.back = 3; 10 + 2 = 12. 3 < 12.
+    //tant que le dernier est plus petit que n (nbre de tous les nbres dans pend + 2)
+    while (jac.back() < n +  2 ) //ex n = 10. jac.back = 3; 10 + 2 = 12. 3 < 12.
     {
-        //number of elements; ex jac = [1,3,5]; sz = 3
+        //number of elements à l'instant t; ex jac = [1,3,5]; sz = 3
         std::size_t sz = jac.size();
 
+        //ex sz = 2 (1, 3) : jac[2 - 1 = 1] + 2 * jac[sz - 2 = 0]    = jac[(3)] + 2 * jac[(1)] =   5
         jac.push_back(jac[sz - 1] + 2 * jac[sz - 2]);
+
     }
 
     return jac;
 }
 
 
-// ─────────────────────────────────────────────────────────────────────────────
 // Ford-Johnson for std::vector<int>
-// ─────────────────────────────────────────────────────────────────────────────
+//prend réf vers un tableau
+
+
+
+//Les questions:
+
+// explique en détail ça : if (arr[2 * i] < arr[2 * i + 1])
+
+//explique ce resultat du programme (notammet les 19 et le 17 avec vec c est plus long ? c est quoi us?): ./PmergeMe 12 2 3 4 5
+// Before: 12 2 3 4 5
+// After:  2 3 4 5 12
+// Time to process a range of 5 elements with std::vector : 19.00000 us
+// Time to process a range of 5 elements with std::deque  : 17.00000 us
+// ➜  ex02 git:(main) ✗
+
+
+// //explique cette partie, notamment cette partie  std::make_pair(arr[2 * i], arr[2 * i + 1]) et et comment on reconnait les plus grands larger [i] ? :    origPairs[i] = std::make_pair(arr[2 * i], arr[2 * i + 1]);
+//         //on prend seulement les grands nombres larger [i] = grand
+//         larger[i]  = arr[2 * i];
+
+//donne un exemple de comment il va trier les grands recursivment :  //La fonction s'appelle elle même
+// fjVec(larger);
+
+
 void PmergeMe::fjVec(std::vector<int> & arr) 
 {
     //si 0 ou 1 élément on arrête
     if (arr.size() <= 1)
         return;
 
-    // ── Step 0: handle odd element 
+    // ── Step 0: les éléments pairs
     //on vérifie si le nombre d'éléments est impair
+    //true = 1 ; false = 0;
+    //est ce qu'il est impair ?
     bool hasStraggler = (arr.size() % 2 != 0);
     
-    //si impair, on garde le dernier nombre
+    //si impair, on garde le dernier nombre du arr.back dans Straggler
     int  straggler    = hasStraggler ? arr.back() : 0;
 
     //on enlève ce dernier nombre pour l'instant
@@ -123,42 +154,76 @@ void PmergeMe::fjVec(std::vector<int> & arr)
 
     //--créer des paires
     //on calcule combien de paires on peut faire ex. [5, 2, 8, 3] > 2 paires
-    std::size_t m = arr.size() / 2; // number of pairs
+    std::size_t m = arr.size() / 2; // nbr de pairs
 
     
-    // ── Step 1: sort each adjacent pair so arr[2i] ≥ arr[2i+1] ──────────────
+    // Step 1: sort each adjacent pair so arr[2i] ≥ arr[2i+1] ──────────────
    
    //on force chaque paire à être (grand à gauche, petit à droite). (2, 5) devient (5, 2)
+   //m : nombre de pairs
+   //arr : tableau vec 
     for (std::size_t i = 0; i < m; i++)
         if (arr[2 * i] < arr[2 * i + 1])
             std::swap(arr[2 * i], arr[2 * i + 1]);
 
 
-    // ── Step 2: keep a copy of original pairs, extract larger elements ───────
-    std::vector<std::pair<int, int> > origPairs(m);
+    //step 2: garder la copie des pairs orginaux + extraire les grands éléments
+
+    //tableau vec origParis
+    //m : nbr de pairs
+    //pair: objet qui contient (first, second)
+    std::vector <std::pair <int, int> > origPairs(m);
+    //plus grand élément
     std::vector<int> larger(m);
+    
     for (std::size_t i = 0; i < m; i++) 
     {
-       //on garde les pairs originales prigPairs[i] = (grand, petit)
+       //on garde les pairs originales origPairs[i] = (grand, petit)
+       //2 * 0 = 0 puis 2 * 1 = 2 (deuxième paire)
         origPairs[i] = std::make_pair(arr[2 * i], arr[2 * i + 1]);
         //on prend seulement les grands nombres larger [i] = grand
+        //on prend celui de gauche (grâce au swap précédent)
         larger[i]  = arr[2 * i];
     }
 
-    // ── Step 3: recursively sort the larger elements (Ford-Johnson) 
-    //on trie les grands(récursion) Ford Johnson. la fonction s'appelle elle même
+
+
+    // ── Step 3: récursivement on range les plus grands (Ford-Johnson) 
+    //La fonction s'appelle elle même
+    //ex. : arr = [12,2,9,1,7,3,8,4] puis : larger = [12,9,7,8], puis fjVec(larger), puis fjVec([12,8]), puis 12 on arrête et on remonte 
     fjVec(larger);
 
-    // ── Step 4: re-associate each sorted larger with its smaller partner ──────
-    //   (O(n²) but correct; handles duplicates via "used" mask)
 
-    //on remet chaque grand avec son petit????
+    // Step 4: re-associate each sorted larger with its smaller partner 
 
+    //ex: origPairs:
+    // (3,9)
+    // (1,7)
+    // (4,8)
+    //puis extraction : larger = 9 7 8
+    //puis recherche 7
+    //sortedParis remet les pairs ensemble
+
+    //on remet chaque grand avec son petit
+
+    //tableau de booléans (tout initialisé à false) (ex. false false false)
+    //sert à dire est ce que cette paire a été déjà utilisée ? (ex avec les doublons)
+    //m = nombres de pairs
     std::vector<bool> used(m, false);
+
+    //on crée le tableau final qui contiendra p'rdre des gradns triés
     std::vector<std::pair<int, int> > sortedPairs(m);
-    for (std::size_t i = 0; i < m; i++) {
-        for (std::size_t j = 0; j < m; j++) {
-            if (!used[j] && origPairs[j].first == larger[i]) {
+
+    //on parcourt les grands triés
+    // tant que i < nombres de pairs
+    for (std::size_t i = 0; i < m; i++) 
+    {
+        for (std::size_t j = 0; j < m; j++) 
+        {
+            //on parcourt les grands triés
+            //quel pair original avait ce grand élément
+            if (!used[j] && origPairs[j].first == larger[i]) 
+            {
                 sortedPairs[i] = origPairs[j];
                 used[j]        = true;
                 break;
@@ -167,15 +232,20 @@ void PmergeMe::fjVec(std::vector<int> & arr)
     }
 
 
-    // ── Step 5: build main chain [b1, a1, a2, …, am] and pend [b2, …, bm] ───
-    //   b1 ≤ a1 ≤ a2 ≤ … is guaranteed after the recursive sort.
+    // step 5 : contruire mainchain et pend
+    //on a déjà sortedPairs (petit, grand) !!! petit, grand... les grands sont déjà triés !!!
+    //   b1 ≤ a1 ≤ a2 ≤ … est garantie après le tri récursif
 
     //on reconstruit la base mainChain (contient le premier petit et tous les grands triés)
     //pend : les élements à insérer 
 
+    //on crée se vecteur
+    //
     std::vector<int> mainChain;
+    //reserve : réserve de la mémoire à l'avance
     mainChain.reserve(m + 1);
-    mainChain.push_back(sortedPairs[0].second); // b1
+    //on rajoute le second élément de la paire, le petit
+    mainChain.push_back(sortedPairs[0].second);
     for (std::size_t i = 0; i < m; i++)
         mainChain.push_back(sortedPairs[i].first); // a1 … am
 
@@ -184,7 +254,7 @@ void PmergeMe::fjVec(std::vector<int> & arr)
     for (std::size_t i = 1; i < m; i++)
         pend.push_back(sortedPairs[i].second); // b2 … bm
 
-    // ── Step 6: Jacobsthal-ordered binary insertion of pend elements ─────────
+    // ── Step 6: Jacobsthal-ordered binary insertion of pend elements
     //   pend[i] = b_{i+2}, paired with a_{i+2} = sortedPairs[i+1].first
     //   Search range for binary insertion: [begin, pos(a_{i+2})]
     if (!pend.empty()) {
@@ -227,11 +297,12 @@ void PmergeMe::fjVec(std::vector<int> & arr)
         }
     }
 
-    // ── Step 7: insert straggler ───────────
-    //si on avait un nombre seul, on l'insère à la fun correctement
+    //Step 7: inserer straggler
+    //si on avait un nombre seul, on l'insère à la fin correctement
 
     if (hasStraggler)
     {
+        // on crée un itérateur pos ?
         std::vector<int>::iterator pos =
             std::lower_bound(mainChain.begin(), mainChain.end(), straggler);
         mainChain.insert(pos, straggler);
@@ -241,10 +312,9 @@ void PmergeMe::fjVec(std::vector<int> & arr)
     arr = mainChain;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+
 // Ford-Johnson for std::deque<int>
-// (Same algorithm — intentionally written separately per subject requirements)
-// ─────────────────────────────────────────────────────────────────────────────
+
 
 void PmergeMe::fjDeq(std::deque<int>& arr) {
     if (arr.size() <= 1)
@@ -283,17 +353,26 @@ void PmergeMe::fjDeq(std::deque<int>& arr) {
 
     std::deque<int> mainChain;
     mainChain.push_back(sortedPairs[0].second);
+    //boucle sur toutes les paires
     for (std::size_t i = 0; i < m; i++)
         mainChain.push_back(sortedPairs[i].first);
 
+    //on crée un tbaleau autre vecteur pend
     std::vector<int> pend;
+    //m - 1 : parce que b1 est déjà dans mainChain
     pend.reserve(m - 1);
+    //i = 1 : et pas 0 parce que b1 a déjà été utilisé 
     for (std::size_t i = 1; i < m; i++)
+    
+        //on rajoute les petits éléments restants
         pend.push_back(sortedPairs[i].second);
 
+//resultat : mainChain = [1,7,8,9]
+// pend      = [4,3]
 
-
-    if(!pend.empty()) {
+    
+    if(!pend.empty()) 
+    {
         std::vector<std::size_t> jac      = buildJacobsthal(pend.size());
         std::vector<bool>        inserted(pend.size(), false);
 
@@ -352,41 +431,65 @@ void PmergeMe::fjDeq(std::deque<int>& arr) {
 
 //std::cout << std::fixed << std::setprecision(5); >> toujours afficher les décimales (5 chiffres arpès la virgule) (ex.12.34567)
 
+
+
+
+//permet d'affocger les bombres avant tri, tirer avec std::vector puis mesurer le temps du tri et même chose avec deque
+
 void PmergeMe::sort() 
 {
-    // Print unsorted sequence
-    std::cout << "Before:";
+    // affiche message
+    std::cout << "before:";
+
+    //boucle parcourt tout vector
+    //size_t pour index
+    //affiche chaque élément du vecteur
+    // ex: before: 5 2 9 1
     for (std::size_t i = 0; i < _vec.size(); i++)
         std::cout << " " << _vec[i];
     std::cout << std::endl;
 
-    // Sort std::vector and measure time
+    // on le trie et mesure le temps
     // on note le temps actuel
+    //clock ! retourne le temps CPU utilisé
+    //startVec : le temps de depart
     std::clock_t startVec = std::clock();
+    //fct qui trie le vect
     fjVec(_vec);
+    //on récupère le temps après
     std::clock_t endVec = std::clock();
 
+
+    //calcul de temps du vecteur e, microsecondes
+    //conversion en double (car les division entiers perd les décimales)
+    //CLOCKS_PER_SEC = constante système   sert à convertir le résultat en secondes ! car le prog retourne le nbre de “ticks” CPU (unité de temps interne en CPU)!! 
+    //1 seconde = 1 000 000 microsecondes.
+    //temps final = secondes → microsecondes
     double timeVec = static_cast<double>(endVec - startVec) /
                      CLOCKS_PER_SEC * 1000000.0;
 
-    // Sort std::deque and measure time
+    // trier std::deque et mesure du temps
     std::clock_t startDeq = std::clock();
     fjDeq(_deq);
     std::clock_t endDeq = std::clock();
     double timeDeq = static_cast<double>(endDeq - startDeq) /
                      CLOCKS_PER_SEC * 1000000.0;
                 
-    // Print sorted sequence
+    // Print le trie après le fjVec
     std::cout << "After: ";
     for (std::size_t i = 0; i < _vec.size(); i++)
         std::cout << " " << _vec[i];
     std::cout << std::endl;
 
-    // Print timings
+    // imprimer timing
 
+    //std::fixed  : notation décimale fixe; setprecision : on fixe 5 chiffres après la virgule. ex: 12.34567
     std::cout << std::fixed << std::setprecision(5);
-    std::cout << "Time to process a range of " << _vec.size()
+    // _vec.size() : nombres d éléments
+    // µs = us >> micosecondes > millionième de seconde
+    std::cout << "time to process a range of " << _vec.size()
               << " elements with std::vector : " << timeVec << " us" << std::endl;
-    std::cout << "Time to process a range of " << _deq.size()
+
+    std::cout << "time to process a range of " << _deq.size()
               << " elements with std::deque  : " << timeDeq << " us" << std::endl;
 }
