@@ -3,12 +3,12 @@
 
 #include <vector> //tableau dynamique (accès rapide, mémoire contigue)
 #include <deque> //structure double-ended queue(instertion rapides aux deux bouts)
-#include <string> //
+#include <string>
 
 
-//classe PmergeMe
-//encapsuler un algorithme de tri
-//la classe va stocker les données, parser des arguments, trier ces données, comprare possiblement vector vs deque
+
+
+//la classe va stocker les données, parser des arguments, trier ces données; compare vector vs deque
 class PmergeMe 
 {
     public:
@@ -19,16 +19,16 @@ class PmergeMe
 
     //prend les argument du programme
     //rôle : convertir les arguments en int
-    //remplir _vec et _deq???
     void parse(int argc, char** argv);
     void sort();//fct principale lance le tri
 
 private:
-    std::vector<int> _vec;
-    std::deque<int>  _deq;
 
-    //static de dépend pas de l'objet(this n'est pas utilisé)
-    //fj >>> Ford Johnson 
+     std::vector<int> _vec;
+     std::deque<int>  _deq;
+
+    //visible seulement dans ce fichier
+    //static de dépend pas de l'objet(this n'est pas utilisé) 
     static void fjVec(std::vector<int>& arr);
     static void fjDeq(std::deque<int>& arr);
 };
@@ -53,7 +53,7 @@ private:
 //         ┌ vector ── fjVec ── sorted
 // input ──┤
 //         └ deque  ── fjDeq ── sorted
-//puis comparaison des deux
+//puis  comparaison des deux
 
 
 //ex.

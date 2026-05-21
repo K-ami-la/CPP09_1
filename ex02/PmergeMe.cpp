@@ -2,14 +2,12 @@
 
 #include <iostream> //<<
 #include <sstream> //std::istringstream iss
-#include <stdexcept> //reuntime_error
+#include <stdexcept> //runtime_error
 #include <algorithm> //std:swap ; std::lower_bound
 #include <climits> // INT_MAX
 #include <ctime> //std::clock()
-#include <iomanip> //format/affichage : std::fixed ; std::precision()
+#include <iomanip> //format/affichage: std::fixed ; std::precision()
 
-
-//Canonical form
 
 PmergeMe::PmergeMe() {}
 
@@ -22,6 +20,7 @@ PmergeMe& PmergeMe::operator=(const PmergeMe& other)
         _vec = other._vec;
         _deq = other._deq;
     }    return *this;
+
 }
 
 PmergeMe::~PmergeMe() {}
@@ -33,12 +32,12 @@ PmergeMe::~PmergeMe() {}
 // on parse les chiffres à l'entrée (input)
 
 //on commence à 1 (les nombres)
-//istringstream > on transforme la string en flux. ex "42" devient 42
+//istringstream > on transforme la string en flux (ça peut être double, long, float, string!). ex "42" devient 42
 //istringstream est objet de la bibliothéue c++ qui transforme une string en flux (stream). on a : "42 17 8" et puis on peut lire un par un : 42 → 17 → 8
 //iss : input string stream
 
 
-//long n : variable pour stocker le nombre. éviter le dépassement d'un int.
+//long n : variable pour stocker les grands nombres (float = nbre à virgule). éviter le dépassement d'un int. LONG_MAX = 9223372036854775807
 //if (!(iss >> n) || n < 0 || n > static_cast<long>(INT_MAX) >>> vérifie 3 choses : - - nombre positif - pas trop grand  > évite les dépassements de int.
 //--si erreur lance une erreur
 //iss >> n : je lis un nombre depuis la string. échoue si pas slmt chiffres
@@ -48,23 +47,26 @@ PmergeMe::~PmergeMe() {}
 //leftover >>> vérifie qu'il n'y a rien en trop (ex. "42abb")
 //--si le texte reste on throw une erreur
 //on ajoute des conteneurs
-//static_cast >>> converit long en int
+//static_cast >>> converti long en int
 //_vec.empty() >>> si aucun nombre n'a été donné throw erreur identique à_deque.empty ...
 
 void      PmergeMe::parse(int argc, char** argv) 
 {
-    for(int i = 1; i < argc; i++) 
+    for (int i = 1; i < argc; i++) 
     {
         std::istringstream iss(argv[i]);
         
+        //long = type demandé à iss >> n = je lis tant que je peux convertir en type demandé
         long  n;
         if(!(iss >> n) || n < 0 || n > static_cast<long>(INT_MAX) )
             throw std::runtime_error("Error: invalid argument.");
 
+        //il reste du texte dans le stream
         std::string leftover;
         if (iss >> leftover)
             throw std::runtime_error("Error: invalid argument.");
 
+        //on crée les deux tableaux avec les suites de nombres
         _vec.push_back(static_cast<int>(n));
         _deq.push_back(static_cast<int>(n));
     }
@@ -109,38 +111,16 @@ static std::vector<std::size_t> buildJacobsthal(std::size_t  n)
 
 
 // Ford-Johnson for std::vector<int>
-//prend réf vers un tableau
-
-
-
-//Les questions:
-
-// explique en détail ça : if (arr[2 * i] < arr[2 * i + 1])
-
-//explique ce resultat du programme (notammet les 19 et le 17 avec vec c est plus long ? c est quoi us?): ./PmergeMe 12 2 3 4 5
-// Before: 12 2 3 4 5
-// After:  2 3 4 5 12
-// Time to process a range of 5 elements with std::vector : 19.00000 us
-// Time to process a range of 5 elements with std::deque  : 17.00000 us
-// ➜  ex02 git:(main) ✗
-
-
-// //explique cette partie, notamment cette partie  std::make_pair(arr[2 * i], arr[2 * i + 1]) et et comment on reconnait les plus grands larger [i] ? :    origPairs[i] = std::make_pair(arr[2 * i], arr[2 * i + 1]);
-//         //on prend seulement les grands nombres larger [i] = grand
-//         larger[i]  = arr[2 * i];
-
-//donne un exemple de comment il va trier les grands recursivment :  //La fonction s'appelle elle même
-// fjVec(larger);
-
 
 void PmergeMe::fjVec(std::vector<int> & arr) 
 {
-    //si 0 ou 1 élément on arrête
+   
+    //si 0 ou 1 element on arrete
     if (arr.size() <= 1)
         return;
 
-    // ── Step 0: les éléments pairs
-    //on vérifie si le nombre d'éléments est impair
+    //step 0: les elements pairs
+    //on verifie si le nombre d'elements est impair
     //true = 1 ; false = 0;
     //est ce qu'il est impair ?
     bool hasStraggler = (arr.size() % 2 != 0);
@@ -148,67 +128,56 @@ void PmergeMe::fjVec(std::vector<int> & arr)
     //si impair, on garde le dernier nombre du arr.back dans Straggler
     int  straggler    = hasStraggler ? arr.back() : 0;
 
-    //on enlève ce dernier nombre pour l'instant
+    //on enleve ce dernier nombre pour l'instant
     if (hasStraggler) arr.pop_back();
 
 
-    //--créer des paires
-    //on calcule combien de paires on peut faire ex. [5, 2, 8, 3] > 2 paires
-    std::size_t m = arr.size() / 2; // nbr de pairs
+    //step 1 : faire des paires
+    //a) on calcule combien de paires on peut faire ex. [5, 2, 8, 3] > 2 paires
+    // m = nombre de pairs
+    std::size_t m = arr.size() / 2;
 
     
-    // Step 1: sort each adjacent pair so arr[2i] ≥ arr[2i+1] ──────────────
-   
-   //on force chaque paire à être (grand à gauche, petit à droite). (2, 5) devient (5, 2)
-   //m : nombre de pairs
-   //arr : tableau vec 
+    //b) on met les grands d'un côté [2i] ≥ arr[2i+1]
+    //on force chaque paire à être (grand à gauche, petit à droite). (2, 5) devient (5, 2)
+    //arr : tableau vec 
+    //ex. first round : indice 0 et indice 1, seconde round: indice 2*1= 2 et indice 2*1+1 = 3...etc.
     for (std::size_t i = 0; i < m; i++)
         if (arr[2 * i] < arr[2 * i + 1])
             std::swap(arr[2 * i], arr[2 * i + 1]);
 
 
     //step 2: garder la copie des pairs orginaux + extraire les grands éléments
-
-    //tableau vec origParis
-    //m : nbr de pairs
-    //pair: objet qui contient (first, second)
+    //a) on cree un tableau vec, qui s'appelle origPairs et on alloue directement m éléments
+    //pair: objet qui contient (.first, .second)
     std::vector <std::pair <int, int> > origPairs(m);
-    //plus grand élément
+
+    //tableau stocke les plus grands éléments
     std::vector<int> larger(m);
     
+
+    //on garde les pairs originales origPairs[i] = (grand, petit)
+    //première paire : (2 * 0) = 0 puis (2 * 0  + ) = 1...etc
     for (std::size_t i = 0; i < m; i++) 
     {
-       //on garde les pairs originales origPairs[i] = (grand, petit)
-       //2 * 0 = 0 puis 2 * 1 = 2 (deuxième paire)
+
         origPairs[i] = std::make_pair(arr[2 * i], arr[2 * i + 1]);
-        //on prend seulement les grands nombres larger [i] = grand
-        //on prend celui de gauche (grâce au swap précédent)
+        //on prend seulement les grands nombres larger [i] = grand (celui de gauche). ex : (2 * 0) = 0; (2 * 1) = 2; (2 * 2) = 4; etc.
         larger[i]  = arr[2 * i];
     }
 
 
 
-    // ── Step 3: récursivement on range les plus grands (Ford-Johnson) 
+    // step 3: étape de récursion. "merge sort" 
     //La fonction s'appelle elle même
     //ex. : arr = [12,2,9,1,7,3,8,4] puis : larger = [12,9,7,8], puis fjVec(larger), puis fjVec([12,8]), puis 12 on arrête et on remonte 
     fjVec(larger);
 
 
-    // Step 4: re-associate each sorted larger with its smaller partner 
+    // Step 4: réassocier chaque grand avec son petit grâce à OrigPairs
 
-    //ex: origPairs:
-    // (3,9)
-    // (1,7)
-    // (4,8)
-    //puis extraction : larger = 9 7 8
-    //puis recherche 7
-    //sortedParis remet les pairs ensemble
-
-    //on remet chaque grand avec son petit
-
-    //tableau de booléans (tout initialisé à false) (ex. false false false)
-    //sert à dire est ce que cette paire a été déjà utilisée ? (ex avec les doublons)
-    //m = nombres de pairs
+    //tableau de booléans used (tout initialisé à false) (ex. false false false). false = n'a pas été appelé
+    //sert à dire est ce que cette paire a été déjà utilisée ? (ex avec les doublons)?????
     std::vector<bool> used(m, false);
 
     //on crée le tableau final qui contiendra p'rdre des gradns triés
@@ -230,6 +199,7 @@ void PmergeMe::fjVec(std::vector<int> & arr)
             }
         }
     }
+
 
 
     // step 5 : contruire mainchain et pend
@@ -316,7 +286,8 @@ void PmergeMe::fjVec(std::vector<int> & arr)
 // Ford-Johnson for std::deque<int>
 
 
-void PmergeMe::fjDeq(std::deque<int>& arr) {
+void PmergeMe::fjDeq(std::deque<int>& arr) 
+{
     if (arr.size() <= 1)
         return;
 
@@ -416,10 +387,8 @@ void PmergeMe::fjDeq(std::deque<int>& arr) {
         arr = mainChain;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Public sort: display, time both containers, display result
-// ─────────────────────────────────────────────────────────────────────────────
 
+//fct sort
 
 //affiche les nombres avant : std::cout << "before";
 //--for(std::size_t i = 0; i < _vec.size(); i++) + affiche chaque nombre avec esapce
@@ -429,67 +398,73 @@ void PmergeMe::fjDeq(std::deque<int>& arr) {
 
 //    double timeDeq = static_cast<double>(endDeq - startDeq) /        CLOCKS_PER_SEC * 1000000.0; >>> on transforme le temps en microsecondes
 
-//std::cout << std::fixed << std::setprecision(5); >> toujours afficher les décimales (5 chiffres arpès la virgule) (ex.12.34567)
+//std::cout << std::fixed << std::setprecision(5); fixed : toujours afficher les décimales; setprecision (5 chiffres arpès la virgule)
 
 
 
+//permet d'afficher les nombres avant tri, tirer avec std::vector puis mesurer le temps du tri et même chose avec deque
 
-//permet d'affocger les bombres avant tri, tirer avec std::vector puis mesurer le temps du tri et même chose avec deque
+//boucle parcourt tout vector
+//size_t pour index
+//affiche chaque élément du vecteur
+// " " avec un espace
+// ex: before: 5 2 9 1
+
+//std::clock_t startVec = std::clock();
+//on stocke un compteur CPU (type t_clock puis on voit appeler la fct std::clock()) (ticks = unité de mesure du CPU) à l instant T
+// on note le temps actuel
+//startVec : le temps de depart
+
+
+//calcul de temps du vecteur e, microsecondes
+//conversion en double (car les division entiers perd les décimales)
+//CLOCKS_PER_SEC = constante système   sert à convertir le résultat en secondes ! car le prog retourne le nbre de “ticks” CPU (unité de temps interne en CPU)!! 
+//1 seconde = 1 000 000 microsecondes.
+//temps final = secondes → microsecondes
+//double comme float (32 bits) mais plus grand  64 bits. gardent les décimales
+
+// µs = us >> micosecondes > millionième de seconde
 
 void PmergeMe::sort() 
 {
-    // affiche message
+
     std::cout << "before:";
 
-    //boucle parcourt tout vector
-    //size_t pour index
-    //affiche chaque élément du vecteur
-    // ex: before: 5 2 9 1
     for (std::size_t i = 0; i < _vec.size(); i++)
         std::cout << " " << _vec[i];
     std::cout << std::endl;
 
-    // on le trie et mesure le temps
-    // on note le temps actuel
-    //clock ! retourne le temps CPU utilisé
-    //startVec : le temps de depart
     std::clock_t startVec = std::clock();
+
     //fct qui trie le vect
     fjVec(_vec);
+
     //on récupère le temps après
     std::clock_t endVec = std::clock();
 
+    double  timeVec = static_cast<double>(endVec - startVec) / //calcul du nbr ticks écoulés et converti en double
+                     CLOCKS_PER_SEC * 1000000.0;//constante système. sert à convertr en seconde. CLOCKS_PER_SEC = nombre de ticks par seconde = secondes. * 1000000.0 = secondes en microsecondes.
 
-    //calcul de temps du vecteur e, microsecondes
-    //conversion en double (car les division entiers perd les décimales)
-    //CLOCKS_PER_SEC = constante système   sert à convertir le résultat en secondes ! car le prog retourne le nbre de “ticks” CPU (unité de temps interne en CPU)!! 
-    //1 seconde = 1 000 000 microsecondes.
-    //temps final = secondes → microsecondes
-    double timeVec = static_cast<double>(endVec - startVec) /
-                     CLOCKS_PER_SEC * 1000000.0;
-
-    // trier std::deque et mesure du temps
+    //pareil, mais avec deque
     std::clock_t startDeq = std::clock();
     fjDeq(_deq);
-    std::clock_t endDeq = std::clock();
+    std::clock_t endDeq  = std::clock();
     double timeDeq = static_cast<double>(endDeq - startDeq) /
-                     CLOCKS_PER_SEC * 1000000.0;
-                
-    // Print le trie après le fjVec
-    std::cout << "After: ";
+            CLOCKS_PER_SEC * 1000000.0;
+     
+                    
+    // Print le tri après le fjVec
+    std:: cout << "After: ";
     for (std::size_t i = 0; i < _vec.size(); i++)
         std::cout << " " << _vec[i];
     std::cout << std::endl;
 
-    // imprimer timing
-
-    //std::fixed  : notation décimale fixe; setprecision : on fixe 5 chiffres après la virgule. ex: 12.34567
+    
+    //notation en interne: surcharge d'opérateur + flag changé : std::ostream& operator<<(std::ostream&, manipulator);
     std::cout << std::fixed << std::setprecision(5);
-    // _vec.size() : nombres d éléments
-    // µs = us >> micosecondes > millionième de seconde
     std::cout << "time to process a range of " << _vec.size()
               << " elements with std::vector : " << timeVec << " us" << std::endl;
 
-    std::cout << "time to process a range of " << _deq.size()
+    std::cout <<  "time to process a range of " << _deq.size()
               << " elements with std::deque  : " << timeDeq << " us" << std::endl;
 }
