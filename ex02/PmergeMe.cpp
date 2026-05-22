@@ -168,7 +168,7 @@ void PmergeMe::fjVec(std::vector<int> & arr)
 
 
 
-    // step 3: étape de récursion. "merge sort" 
+    //step 3: étape de récursion. "merge sort" 
     //La fonction s'appelle elle même
     //ex. : arr = [12,2,9,1,7,3,8,4] puis : larger = [12,9,7,8], puis fjVec(larger), puis fjVec([12,8]), puis 12 on arrête et on remonte 
     fjVec(larger);
@@ -177,10 +177,10 @@ void PmergeMe::fjVec(std::vector<int> & arr)
     // Step 4: réassocier chaque grand avec son petit grâce à OrigPairs
 
     //tableau de booléans used (tout initialisé à false) (ex. false false false). false = n'a pas été appelé
-    //sert à dire est ce que cette paire a été déjà utilisée ? (ex avec les doublons)?????
+    //sert à dire est ce que cette paire a été déjà utilisée ?
     std::vector<bool> used(m, false);
 
-    //on crée le tableau final qui contiendra p'rdre des gradns triés
+    //on crée le tableau final qui contiendra les gradns triés
     std::vector<std::pair<int, int> > sortedPairs(m);
 
     //on parcourt les grands triés
@@ -201,43 +201,55 @@ void PmergeMe::fjVec(std::vector<int> & arr)
     }
 
 
-
-    // step 5 : contruire mainchain et pend
-    //on a déjà sortedPairs (petit, grand) !!! petit, grand... les grands sont déjà triés !!!
-    //   b1 ≤ a1 ≤ a2 ≤ … est garantie après le tri récursif
-
-    //on reconstruit la base mainChain (contient le premier petit et tous les grands triés)
-    //pend : les élements à insérer 
-
-    //on crée se vecteur
-    //
+    //step 5 : on a SortedPairs. Maintenant on fait le squelette trié(MainChain) (b1, a1, a2, a3); pend éléments à insérer.
     std::vector<int> mainChain;
+
     //reserve : réserve de la mémoire à l'avance
     mainChain.reserve(m + 1);
-    //on rajoute le second élément de la paire, le petit
+
+    //on rajoute le second élément de la paire, le petit >>> construction spécifique à Ford–Johnson !.
     mainChain.push_back(sortedPairs[0].second);
     for (std::size_t i = 0; i < m; i++)
-        mainChain.push_back(sortedPairs[i].first); // a1 … am
+        mainChain.push_back(sortedPairs[i].first); //on rajoute les grands
 
     std::vector<int> pend;
     pend.reserve(m - 1);
     for (std::size_t i = 1; i < m; i++)
-        pend.push_back(sortedPairs[i].second); // b2 … bm
+        pend.push_back(sortedPairs[i].second); // on rajoute les petits
 
-    // ── Step 6: Jacobsthal-ordered binary insertion of pend elements
-    //   pend[i] = b_{i+2}, paired with a_{i+2} = sortedPairs[i+1].first
-    //   Search range for binary insertion: [begin, pos(a_{i+2})]
-    if (!pend.empty()) {
-        std::vector<std::size_t> jac      = buildJacobsthal(pend.size());
-        std::vector<bool>        inserted(pend.size(), false);
+    
+    
+   //step 6 Jacobsthal insertion.
 
-        for (std::size_t k = 1; k < jac.size(); k++) {
-            // Current group: pend 0-based indices from lo to hi (inclusive)
+    if (!pend.empty()) 
+    {
+        //on crée un tableau jac de taille >= n + 2 de pend avec la suite de jacobsthal
+        //on donne la taille du tabl pend !
+        //ex . pend.size() = 6; jac = [1, 3, 5, 11] (c est une suite qui dépasse 6 (=the size) et pas qui est plus grand que size)
+        std::vector<std::size_t> jac  = buildJacobsthal(pend.size());
+        std::vector<bool>  inserted(pend.size(), false);
+
+        for (std::size_t k = 1; k < jac.size(); k++) 
+        {
+            //jac va découper pend en groupes
+            //indice dans jac[]
+            //lo et hi : indices dans pend[]
+            //min: on prend une valeur qui ne depasse la taille de pend[]
+            //pend[lo ... hi]
+
+            //ex: pend = [10, 20, 30, 40, 50, 60] ; jac[1, 3, 5, 11] qui va donner 
+            //>>> lo = jac[k - 1] - 1 > (=jac[0] - 1) > (= 1 - 1) = 0. début du group index = 0.
+            //hi = min(jac[k] - 2, pend.size() - 1) = jac[1] = 3 - 2 =  1...
+            //groupe 1 : pend[0..1].
+
+            //- 1 dans lo : pour aligner la base de jac > -1 = conversion math → C++ indexing
+            // - 2 dans hi : aligner la base de jac + on traite à partir de b2 car b1 déjà trié !!!
             std::size_t hi = std::min(jac[k] - 2, pend.size() - 1);
             std::size_t lo = jac[k - 1] - 1;
 
-            // Insert in reverse order within the group
-            for (int i = static_cast<int>(hi); i >= static_cast<int>(lo); i--) {
+            // insetion dans l ordre inverse (car les grands sont plus risque)
+            for (int i = static_cast<int>(hi); i >= static_cast<int>(lo); i--) 
+            {
                 if (i < 0 || static_cast<std::size_t>(i) >= pend.size())
                     continue;
                 if (inserted[i])
@@ -281,6 +293,36 @@ void PmergeMe::fjVec(std::vector<int> & arr)
     //on remplace l'ancien tableau par le trié
     arr = mainChain;
 }
+
+//lowe_bound function :
+
+// template <class Iterator, class T>
+// Iterator lower_bound(Iterator first, Iterator last, const T& value)
+// {
+//     while (first != last)
+//     {
+//         // 1. on calcule le milieu de la zone
+//         Iterator mid = first + (last - first) / 2;
+
+//         // 2. comparaison avec l'élément du milieu
+//         if (*mid < value)
+//         {
+//             // value est PLUS GRAND
+//             // on ignore toute la partie gauche (mid inclus)
+//             first = mid + 1;
+//         }
+//         else
+//         {
+//             // value <= *mid
+//             // on garde la gauche (mid devient la nouvelle fin)
+//             last = mid;
+//         }
+//     }
+
+//     // 3. first == position d'insertion
+//     return first;
+// }
+
 
 
 // Ford-Johnson for std::deque<int>
